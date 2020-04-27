@@ -4,27 +4,63 @@
 #include <unistd.h>
 #include <pthread.h>
 
+#define LR_CTRL_MAX 11 /* Length/Radius Ctrl(1~10) */
+#define MAX_CALL_N_JOBS 1000
+
 static void *__call_render(void *arg)
 {
-	int i;
-	int njob;
+	int i, njob, iter_count;
 	utim_image_t *raw = global_render_raw;
 	if (global_preview_img)
 		free_image(global_preview_img);
 	global_preview_img = image_create(raw->xsize, raw->ysize, 4, 255);
 	utim_point_t center;
-	center.x = (int)(global_draw_center_ratio_x * (raw->xsize - 1));
-	center.y = (int)(global_draw_center_ratio_y * (raw->ysize - 1));
-	njob = global_draw_lines / 100;
-	for (i = 0; i < 100; ++i) {
-		random_redraw_radiation(raw, global_preview_img,
-			&center, njob, global_lengthCtrl, global_line_width, i);
+	njob = global_render_ctrl_v0 / 100;
+	if (njob > MAX_CALL_N_JOBS) {
+		njob = MAX_CALL_N_JOBS;
+		iter_count = global_render_ctrl_v0 / njob;
+	} else if (!njob) {
+		iter_count = global_render_ctrl_v0;
+		njob = 1;
+	} else {
+		iter_count = 100;
+	}
+	for (i = 0; i < iter_count; ++i) {
+		if (global_flag_render_cancel) {
+			global_flag_render_cancel = 0;
+			break;
+		}
+		center.x = (int)(global_draw_center_ratio_x * (raw->xsize - 1));
+		center.y = (int)(global_draw_center_ratio_y * (raw->ysize - 1));
+		switch (global_stroke_type) {
+			case ST_RADIATION:
+				random_redraw_radiation(raw, global_preview_img,
+					&center, njob, LR_CTRL_MAX - global_render_ctrl_v2,
+					global_render_ctrl_v1, i, global_render_ctrl_v3);
+				break;
+			case ST_HORIZONTAL:
+				random_redraw_horizontal(raw, global_preview_img,
+					njob, LR_CTRL_MAX - global_render_ctrl_v2,
+					global_render_ctrl_v1, i, global_render_ctrl_v3);
+				break;
+			case ST_VERTICAL:
+				random_redraw_vertical(raw, global_preview_img,
+					njob, LR_CTRL_MAX - global_render_ctrl_v2,
+					global_render_ctrl_v1, i, global_render_ctrl_v3);
+				break;
+			case ST_ANNULUS:
+				random_redraw_annulus(raw, global_preview_img,
+					njob, LR_CTRL_MAX - global_render_ctrl_v2,
+					global_render_ctrl_v1, i, global_render_ctrl_v3);
+			default:
+				break;
+		}
 		global_flag_preview_update = 1;
-		global_flag_rerendering += njob;
+		global_flag_rendering += njob;
 	}
 	global_flag_preview_update = 1;
-	global_flag_rerender = 0;
-	global_flag_rerendering = 0;
+	global_flag_render = 0;
+	global_flag_rendering = 0;
 	return NULL;
 }
 
@@ -49,9 +85,15 @@ static void preview(struct nk_context *ctx)
 		/* Release texture */
 		glDeleteTextures(1, &global_preview_tex);
 		global_preview_tex = update_image(global_preview_img, img);
-		nk_window_set_size(ctx, "Preview",
-			nk_vec2(global_preview_base, global_preview_base *
-			global_preview_img->ysize/global_preview_img->xsize));
+		if (global_preview_img->xsize > global_preview_img->ysize) {
+			nk_window_set_size(ctx, "Preview",
+				nk_vec2(global_preview_base, global_preview_base*
+				global_preview_img->ysize/global_preview_img->xsize));
+		} else {
+			nk_window_set_size(ctx, "Preview",
+				nk_vec2(global_preview_base*global_preview_img->xsize/
+				global_preview_img->ysize, global_preview_base));	
+		}
 		global_flag_preview_update = 0;
 	}
 	view_rect = nk_rect(
@@ -78,9 +120,10 @@ static void preview(struct nk_context *ctx)
 			global_draw_center_ratio_x = 1.;
 		if (global_draw_center_ratio_y > 1.)
 			global_draw_center_ratio_y = 1.;
-		if (!global_flag_rerender && global_flag_file_loaded) {
+		if (!global_flag_render && global_flag_file_loaded) {
+			global_flag_render_cancel = 0;
 			pthread_create(&pid, NULL, __call_render, NULL);
-			global_flag_rerender = 1;
+			global_flag_render = 1;
 		}
 	}
 	nk_end(ctx);

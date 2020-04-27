@@ -25,22 +25,32 @@ static utim_image_t *global_preview_img;
  */
 
 static struct nk_rect global_ctrl_panel_rect =
-		{.x = 880, .y = 10, .w = 280, .h = 400};
+		{.x = 880, .y = 10, .w = 280, .h = 750};
 
 
 /*
  * Render Control:
  */
 
+enum { /* Stroke Types */
+	ST_RADIATION,
+	ST_HORIZONTAL,
+	ST_VERTICAL,
+	ST_ANNULUS,
+};
+static int global_stroke_type;
+
 static utim_image_t *global_render_raw;
-static int global_flag_rerender;
-static int global_draw_lines;
-static int global_line_width;
-static int global_lengthCtrl;
+static int global_flag_render;
+static int global_render_ctrl_v0;
+static int global_render_ctrl_v1 = 5;
+static int global_render_ctrl_v2 = 5;
+static int global_render_ctrl_v3;
 static float global_draw_center_ratio_x;
 static float global_draw_center_ratio_y;
-static nk_size global_flag_prog_max;    /* Rerendering Progress Cursor */
-static nk_size global_flag_rerendering; /* Rerendering Progress Cursor */
+static int global_flag_render_cancel;
+static nk_size global_flag_prog_max;    /* Rerendering Progress Max */
+static nk_size global_flag_rendering;   /* Rerendering Progress Cursor */
 
 static utim_image_t *load_image(const char *filename)
 {
