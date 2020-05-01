@@ -10,11 +10,11 @@
 static void *__call_render(void *arg)
 {
 	int i, njob, iter_count;
+	utim_point_t center;
 	utim_image_t *raw = global_render_raw;
 	if (global_preview_img)
-		free_image(global_preview_img);
-	global_preview_img = image_create(raw->xsize, raw->ysize, 4, 255);
-	utim_point_t center;
+		utim_free_image(global_preview_img);
+	global_preview_img = utim_create(raw->xsize, raw->ysize, 4, 255);
 	njob = global_render_ctrl_v0 / 100;
 	if (njob > MAX_CALL_N_JOBS) {
 		njob = MAX_CALL_N_JOBS;
@@ -25,17 +25,18 @@ static void *__call_render(void *arg)
 	} else {
 		iter_count = 100;
 	}
+	utim_set_draw_point_fn(utim_set_point);
 	for (i = 0; i < iter_count; ++i) {
 		if (global_flag_render_cancel) {
 			global_flag_render_cancel = 0;
 			break;
 		}
-		center.x = (int)(global_draw_center_ratio_x * (raw->xsize - 1));
-		center.y = (int)(global_draw_center_ratio_y * (raw->ysize - 1));
+		center[0] = (int)(global_draw_center_ratio_x * (raw->xsize - 1));
+		center[1] = (int)(global_draw_center_ratio_y * (raw->ysize - 1));
 		switch (global_stroke_type) {
 			case ST_RADIATION:
 				random_redraw_radiation(raw, global_preview_img,
-					&center, njob, LR_CTRL_MAX - global_render_ctrl_v2,
+					center, njob, LR_CTRL_MAX - global_render_ctrl_v2,
 					global_render_ctrl_v1, i, global_render_ctrl_v3);
 				break;
 			case ST_HORIZONTAL:
@@ -45,6 +46,11 @@ static void *__call_render(void *arg)
 				break;
 			case ST_VERTICAL:
 				random_redraw_vertical(raw, global_preview_img,
+					njob, LR_CTRL_MAX - global_render_ctrl_v2,
+					global_render_ctrl_v1, i, global_render_ctrl_v3);
+				break;
+			case ST_SQUARE:
+				random_redraw_square(raw, global_preview_img,
 					njob, LR_CTRL_MAX - global_render_ctrl_v2,
 					global_render_ctrl_v1, i, global_render_ctrl_v3);
 				break;
@@ -74,7 +80,7 @@ static void preview(struct nk_context *ctx)
 	static struct nk_rect view_rect;
 	if (!flag_init) {
 		img = (struct nk_image*)malloc(sizeof(struct nk_image));
-		global_preview_img = image_create(100, 100, 4, 45);
+		global_preview_img = utim_create(100, 100, 4, 45);
 		global_preview_tex = update_image(global_preview_img, img);
 		flag_init = 1;
 	}

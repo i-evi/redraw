@@ -6,13 +6,16 @@
 #endif
 
 utim_image_t *random_redraw_radiation(utim_image_t *img,
-		utim_image_t *buf, utim_point_t *center, int nline,
+		utim_image_t *buf, utim_point_t center, int nline,
 	int length_ctrl, int width, int seed, int fixed);
 
 utim_image_t *random_redraw_horizontal(utim_image_t *img, utim_image_t *buf,
 	int nline, int length_ctrl, int width, int seed, int fixed);
 
 utim_image_t *random_redraw_vertical(utim_image_t *img, utim_image_t *buf,
+	int nline, int length_ctrl, int width, int seed, int fixed);
+
+utim_image_t *random_redraw_square(utim_image_t *img, utim_image_t *buf,
 	int nline, int length_ctrl, int width, int seed, int fixed);
 
 utim_image_t *random_redraw_annulus(utim_image_t *img, utim_image_t *buf,

@@ -36,7 +36,9 @@ enum { /* Stroke Types */
 	ST_RADIATION,
 	ST_HORIZONTAL,
 	ST_VERTICAL,
+	ST_SQUARE,
 	ST_ANNULUS,
+	ST_ENUM_END,
 };
 static int global_stroke_type;
 
@@ -54,12 +56,11 @@ static nk_size global_flag_rendering;   /* Rerendering Progress Cursor */
 
 static utim_image_t *load_image(const char *filename)
 {
-	utim_image_t *imgdata = image_read(filename);
+	utim_image_t *imgdata = utim_read(filename);
 	if (!imgdata)
 		return NULL;
-	imgdata = image_2rgba(imgdata);
-	if (!imgdata) {
-		free_image(imgdata);
+	if (utim_img2rgba(imgdata)) {
+		utim_free_image(imgdata);
 		return NULL;
 	}
 	return imgdata;

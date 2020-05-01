@@ -24,17 +24,45 @@ typedef unsigned UTIM_INT32 utim_uint32_t;
 
 #define UTIM_MAX_CHANNELS 4
 
-typedef struct {
-	byte *pixels;
-	int xsize;
-	int ysize;
-	int channels;
-} utim_image_t; /* For 256 color-depth images */
+enum {
+	UTIM_ERR_ALLOC,
+	UTIM_ERR_FILE_OPS,
+	UTIM_ERR_BAD_ARG
+};
 
 typedef struct {
-	int x;
-	int y;
-} utim_point_t;
+	byte *pixels;
+	int   xsize;
+	int   ysize;
+	int   channels;
+} utim_image_t; /* For 8bit color-depth images */
+
+typedef int  utim_point_t[2]; /* X, Y */
+typedef byte utim_color_t[4]; /* R, G, B, A */
+
+/*
+ * PSF2 fonts
+ * View https://www.win.tue.nl/~aeb/linux/kbd/font-formats-1.html
+ */
+struct psf2_header {
+	unsigned char magic[4];
+	unsigned int version;
+	unsigned int headersize;    /* offset of bitmaps in file */
+	unsigned int flags;
+	unsigned int length;        /* number of glyphs */
+	unsigned int charsize;      /* number of bytes for each character */
+	unsigned int height, width; /* max dimensions of glyphs */
+	/* charsize = height * ((width + 7) / 8) */
+};
+
+typedef struct {
+	struct psf2_header header;
+	byte              *glyphs;
+	unsigned int      *utf8index;
+} utim_font_t;
+
+#define UTIM_POINT_X 0
+#define UTIM_POINT_Y 1
 
 #define UTIM_COLOR_R 0
 #define UTIM_COLOR_G 1
@@ -46,72 +74,82 @@ typedef struct {
 #define UTIM_RESIZE_NEAREST 0
 #define UTIM_RESIZE_LINEAR  1
 
-typedef struct {
-	byte rgba[4];
-} utim_color_t;
+utim_image_t *utim_read(const char *filename);
 
-utim_image_t *image_read(const char *filename);
-
-int image_write(const char *filename, utim_image_t *img);
-int image_write_ctrl(const char *filename,
+int utim_write(const char *filename, utim_image_t *img);
+int utim_write_ctrl(const char *filename,
 	utim_image_t *img, int comp, int quality);
 
-utim_image_t *image_clone(utim_image_t *img);
-utim_image_t *image_create(int x, int y, int nch, int c);
+utim_image_t *utim_clone(utim_image_t *img);
+utim_image_t *utim_create(int x, int y, int nch, int c);
 
-void free_image(utim_image_t *img);
+void utim_free_image(utim_image_t *img);
 
-utim_image_t *image_resize(utim_image_t *img, int x, int y, int mode);
+utim_image_t *utim_resize(utim_image_t *img, int x, int y, int mode);
 
 /* Swap 2 channels */
-utim_image_t *image_swap_chl(utim_image_t *img, int a, int b);
+int utim_swap_chl(utim_image_t *img, int a, int b);
 
-utim_image_t *image_2rgb(utim_image_t *img);
-utim_image_t *image_2gray(utim_image_t *img);
-utim_image_t *image_2rgba(utim_image_t *img);
+int utim_img2rgb (utim_image_t *img);
+int utim_img2gray(utim_image_t *img);
+int utim_img2rgba(utim_image_t *img);
 
 /* gray2rgb will copy gray channel 2 times */
-utim_image_t *image_gray2rgb(utim_image_t *gray);
-utim_image_t *image_gray2rgba(utim_image_t *gray);
-utim_image_t *image_rgb2bgr(utim_image_t *rgb);
-utim_image_t *image_rgb2gray(utim_image_t *rgb);
-utim_image_t *image_rgb2rgba(utim_image_t *rgb);
-utim_image_t *image_rgba2rgb(utim_image_t *rgba);
-utim_image_t *image_rgba2gray(utim_image_t *rgba);
+int utim_gray2rgb (utim_image_t *gray);
+int utim_gray2rgba(utim_image_t *gray);
+int utim_rgb2bgr  (utim_image_t *rgb);
+int utim_rgb2gray (utim_image_t *rgb);
+int utim_rgb2rgba (utim_image_t *rgb);
+int utim_rgba2rgb (utim_image_t *rgba);
+int utim_rgba2gray(utim_image_t *rgba);
 
-utim_image_t *image_rgb_from_rgba(utim_image_t *rgba);
-utim_image_t *image_bgr_from_rgb(utim_image_t *rgb);
-utim_image_t *image_gray_from_rgb(utim_image_t *rgb);
-utim_image_t *image_rgb_from_gray(utim_image_t *gray);
+utim_image_t *utim_rgb_from_rgba(utim_image_t *rgba);
+utim_image_t *utim_bgr_from_rgb (utim_image_t *rgb);
+utim_image_t *utim_gray_from_rgb(utim_image_t *rgb);
+utim_image_t *utim_rgb_from_gray(utim_image_t *gray);
 
-utim_image_t *image_stack(utim_image_t **chx, int nch);
-utim_image_t *image_pick_chl(utim_image_t *img, int ich);
-
-utim_image_t *image_set_color(utim_image_t *img, int ich, int color);
+utim_image_t *utim_stack    (utim_image_t **chx, int nch);
+utim_image_t *utim_pick_chl (utim_image_t *img, int ich);
+utim_image_t *utim_set_color(utim_image_t *img, int ich, int color);
 
 /*
  * Support Gray, RGB, RGBA images. 
  * If not RGBA image, will convert to RGBA image
  */
-utim_image_t *image_set_opacity(utim_image_t *img, int opacity);
+int utim_set_opacity(utim_image_t *img, int opacity);
 
-utim_image_t *image_superpose(utim_image_t *bg,
-	utim_image_t *img, utim_point_t *p);
+int utim_superpose(utim_image_t *bg, utim_image_t *img, utim_point_t p);
 
 /*
  * Simple Drawing functions
  */
-int image_draw_point(utim_image_t *img,
-	utim_point_t *p, utim_color_t *c);
+int utim_set_point(utim_image_t *img, utim_point_t p, utim_color_t c);
 
-void image_draw_line(utim_image_t *img,
-	utim_point_t *a, utim_point_t *b, utim_color_t *c, int width);
+int utim_draw_point(utim_image_t *img, utim_point_t p, utim_color_t c);
 
-void image_draw_circle(utim_image_t *img,
-	utim_point_t *center, int radius, utim_color_t *color, int width);
+void utim_set_draw_point_fn(int (*fn)
+	(utim_image_t*, utim_point_t, utim_color_t));
 
-void image_draw_filled_circle(utim_image_t *img,
-	utim_point_t *center, int radius, utim_color_t *color);
+void utim_draw_line(utim_image_t *img,
+	utim_point_t a, utim_point_t b, utim_color_t c, int width);
+
+void utim_draw_rect(utim_image_t *img,
+	utim_point_t a, int w, int h, utim_color_t c, int width);
+
+void utim_draw_circle(utim_image_t *img,
+	utim_point_t center, int radius, utim_color_t color, int width);
+
+void utim_draw_filled_circle(utim_image_t *img,
+	utim_point_t center, int radius, utim_color_t color);
+
+/*
+ * Simple text
+ */
+utim_font_t *utim_load_font(const char *filename);
+
+void utim_free_font(utim_font_t *font);
+
+utim_image_t *utim_text(utim_font_t *font, char *text, utim_color_t color);
 
 #undef byte
 

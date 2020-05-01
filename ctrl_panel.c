@@ -9,7 +9,7 @@ static char buf_v0[64] = "1000";
 /* static char buf_v2[64] = "3"; */
 static const char *editor_hints[] = {
 	"Unavailable",                    /* 0 */
-	"Elements (>=100):",              /* 1 */
+	"Draw Elements(>0):",             /* 1 */
 	"Line Width(1~10):",              /* 2 */
 	"RadiusCtrl(1~10):",              /* 3 */
 	"LengthCtrl(1~10):",              /* 4 */
@@ -21,7 +21,8 @@ static void ctrl_panel(struct nk_context *ctx)
 	int i, result;
 	nk_flags event;
 	const char *openfile;
-	static const char *stroke_types[] = {"Radiation","Horizontal","Vertical","Annulus"};
+	static const char *stroke_types[] = 
+		{"Radiation","Horizontal","Vertical","Square","Annulus"};
 	static int check = 1;
 	static int selected_item = 0;
 	if (nk_begin(ctx, "Control Panel", global_ctrl_panel_rect,
@@ -43,14 +44,14 @@ static void ctrl_panel(struct nk_context *ctx)
 		if (nk_button_label(ctx, "Open File")) {
 			openfile = sys_gui_select_file("File selection", SYS_GUI_OPEN);
 			if (openfile) {
-				free_image(global_preview_img);
+				utim_free_image(global_preview_img);
 				global_preview_img = load_image(openfile);
 				if (global_preview_img) {
 					global_flag_file_loaded    = 1;
 					global_flag_preview_update = 1;
 					if (global_render_raw)
-						free_image(global_render_raw);
-					global_render_raw = image_clone(global_preview_img);
+						utim_free_image(global_render_raw);
+					global_render_raw = utim_clone(global_preview_img);
 				}
 				else
 					fprintf(stderr, "Failed open file %s\n", openfile);
@@ -59,7 +60,7 @@ static void ctrl_panel(struct nk_context *ctx)
 		if (nk_button_label(ctx, "Save File")) {
 			openfile = sys_gui_select_file("Save file", SYS_GUI_SAVE);
 			if (openfile)
-				result = image_write(openfile, global_preview_img);
+				result = utim_write(openfile, global_preview_img);
 		}
 
 		/*=============================================
@@ -67,8 +68,8 @@ static void ctrl_panel(struct nk_context *ctx)
 		 *=============================================*/
 		nk_layout_row_static(ctx, _WIDGET_H, _WIDGET_W * 2, 1);
 		nk_label(ctx, "Drawing Control:", NK_TEXT_LEFT);
-		nk_layout_row_dynamic(ctx, _WIDGET_H, 2);
 
+		nk_layout_row_dynamic(ctx, _WIDGET_H, 2);
 		editor_hint_id = 1;
 		nk_label(ctx, editor_hints[editor_hint_id], NK_TEXT_LEFT);
 		nk_edit_string_zero_terminated(ctx,
@@ -79,6 +80,7 @@ static void ctrl_panel(struct nk_context *ctx)
 			case ST_RADIATION:
 			case ST_HORIZONTAL:
 			case ST_VERTICAL:
+			case ST_SQUARE:
 			case ST_ANNULUS:
 				editor_hint_id = 2; break;
 			default:
@@ -92,6 +94,7 @@ static void ctrl_panel(struct nk_context *ctx)
 			case ST_RADIATION:
 			case ST_HORIZONTAL:
 			case ST_VERTICAL:
+			case ST_SQUARE:
 				editor_hint_id = 4; break;
 			case ST_ANNULUS:
 				editor_hint_id = 3; break;
@@ -145,7 +148,7 @@ static void ctrl_panel(struct nk_context *ctx)
 		if (nk_combo_begin_label(ctx, stroke_types[selected_item],
 				nk_vec2(nk_widget_width(ctx), 200))) {
 			nk_layout_row_dynamic(ctx, 25, 1);
-			for (i = 0; i < 4; ++i)
+			for (i = 0; i < ST_ENUM_END; ++i)
 				if (nk_combo_item_label(ctx, stroke_types[i], NK_TEXT_LEFT))
 					selected_item = i;
 			nk_combo_end(ctx);
