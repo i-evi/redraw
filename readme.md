@@ -1,13 +1,8 @@
 # ReDraw
 
-随机重绘图像。目前只支持绘制射线，辐射状充填。C89 规范编写，除 GUI 部分外没有额外依赖。
+随机重绘图像，算是一种 Stroke Based Rendering。目前只支持绘制射线，线段，环形，方形充填。C89 规范编写，除 GUI 部分外没有额外依赖。
 
 ![screenshot](https://github.com/i-evi/redraw/raw/master/demo/screenshot.gif)
-
-|                原图                    |               重绘                 |
-|----------------------------------------|-----------------------------------|
-|![](https://github.com/i-evi/redraw/raw/master/demo/amplogo.png)|![](https://github.com/i-evi/redraw/raw/master/demo/preview_logo.png)|
-|![](https://github.com/i-evi/redraw/raw/master/demo/test.jpg)|![](https://github.com/i-evi/redraw/raw/master/demo/preview_test.jpg)|
 
 
 * 在 linux 上应该很容易编译，直接 `make` 就好了。
