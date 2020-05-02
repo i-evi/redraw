@@ -2,7 +2,7 @@
 
 随机重绘图像。目前只支持绘制射线，辐射状充填。C89 规范编写，除 GUI 部分外没有额外依赖。
 
-![](https://github.com/i-evi/redraw/raw/master/demo/screenshot.png)
+![screenshot](https://github.com/i-evi/redraw/raw/master/demo/screenshot.gif)
 
 |                原图                    |               重绘                 |
 |----------------------------------------|-----------------------------------|

@@ -844,7 +844,7 @@ int utim_set_opacity(utim_image_t *img, int opacity)
 	return 0;
 }
 
-utim_image_t *utim_set_color(utim_image_t *img, int ich, int color)
+utim_image_t *utim_set_chl(utim_image_t *img, int ich, int color)
 {
 	byte *c;
 	int i, ch_size;
@@ -857,6 +857,17 @@ utim_image_t *utim_set_color(utim_image_t *img, int ich, int color)
 		c += img->channels;
 	}
 	return img;
+}
+
+int utim_negative_color(utim_image_t *img)
+{
+	int i, j, ch_size = img->xsize * img->ysize;
+	for (i = 0; i < ch_size; ++i) {
+		for (j = 0; j < img->channels && j < UTIM_COLOR_A; ++j) {
+			img->pixels[i * img->channels + j] =
+				255 - img->pixels[i * img->channels + j];
+		}
+	}
 }
 
 /* _compose_pixel: used for implementing utim_superpose only */
@@ -879,6 +890,8 @@ static void _compose_pixel(utim_image_t *bg,
 	index_bg = _index_calc(bg->xsize, bg->ysize, i, j);
 	index_im = _index_calc(im->xsize, im->ysize,
 			i - p[UTIM_POINT_X], j - p[UTIM_POINT_Y]);
+	if (index_im <0)
+		return;
 	if (bg->channels == 4) { /* RGBA */
 		for (k = 0; k < bg->channels; ++k)
 			c_bg[k] = bg->pixels[index_bg * bg->channels + k];
@@ -919,7 +932,7 @@ int utim_superpose(utim_image_t *bg,
 static int (*utim_draw_point_fn)
 	(utim_image_t*, utim_point_t, utim_color_t) = utim_draw_point;
 
-int utim_set_point(utim_image_t *img, utim_point_t p, utim_color_t c)
+int utim_set_pixel(utim_image_t *img, utim_point_t p, utim_color_t c)
 {
 	int i, index = _index_calc(img->xsize,
 			img->ysize, p[UTIM_POINT_X], p[UTIM_POINT_Y]);

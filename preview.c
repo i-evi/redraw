@@ -25,7 +25,7 @@ static void *__call_render(void *arg)
 	} else {
 		iter_count = 100;
 	}
-	utim_set_draw_point_fn(utim_set_point);
+	utim_set_draw_point_fn(utim_set_pixel);
 	for (i = 0; i < iter_count; ++i) {
 		if (global_flag_render_cancel) {
 			global_flag_render_cancel = 0;

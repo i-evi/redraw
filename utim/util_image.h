@@ -108,9 +108,21 @@ utim_image_t *utim_bgr_from_rgb (utim_image_t *rgb);
 utim_image_t *utim_gray_from_rgb(utim_image_t *rgb);
 utim_image_t *utim_rgb_from_gray(utim_image_t *gray);
 
-utim_image_t *utim_stack    (utim_image_t **chx, int nch);
-utim_image_t *utim_pick_chl (utim_image_t *img, int ich);
-utim_image_t *utim_set_color(utim_image_t *img, int ich, int color);
+utim_image_t *utim_stack   (utim_image_t **chx, int nch);
+utim_image_t *utim_pick_chl(utim_image_t *img, int ich);
+utim_image_t *utim_set_chl (utim_image_t *img, int ich, int color);
+
+int utim_negative_color(utim_image_t *img);
+
+#define utim_set_point(point, x, y) \
+	point[UTIM_POINT_X] = x;    \
+	point[UTIM_POINT_Y] = y;
+
+#define utim_set_color(color, r, g, b, a) \
+	color[UTIM_COLOR_R] = r;          \
+	color[UTIM_COLOR_G] = g;          \
+	color[UTIM_COLOR_B] = b;          \
+	color[UTIM_COLOR_A] = a;
 
 /*
  * Support Gray, RGB, RGBA images. 
@@ -123,7 +135,7 @@ int utim_superpose(utim_image_t *bg, utim_image_t *img, utim_point_t p);
 /*
  * Simple Drawing functions
  */
-int utim_set_point(utim_image_t *img, utim_point_t p, utim_color_t c);
+int utim_set_pixel(utim_image_t *img, utim_point_t p, utim_color_t c);
 
 int utim_draw_point(utim_image_t *img, utim_point_t p, utim_color_t c);
 
