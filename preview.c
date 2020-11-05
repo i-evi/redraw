@@ -34,32 +34,32 @@ static void *__call_render(void *arg)
 		center[0] = (int)(global_draw_center_ratio_x * (raw->xsize - 1));
 		center[1] = (int)(global_draw_center_ratio_y * (raw->ysize - 1));
 		switch (global_stroke_type) {
-			case ST_RADIATION:
-				random_redraw_radiation(raw, global_preview_img,
-					center, njob, LR_CTRL_MAX - global_render_ctrl_v2,
-					global_render_ctrl_v1, i, global_render_ctrl_v3);
-				break;
-			case ST_HORIZONTAL:
-				random_redraw_horizontal(raw, global_preview_img,
-					njob, LR_CTRL_MAX - global_render_ctrl_v2,
-					global_render_ctrl_v1, i, global_render_ctrl_v3);
-				break;
-			case ST_VERTICAL:
-				random_redraw_vertical(raw, global_preview_img,
-					njob, LR_CTRL_MAX - global_render_ctrl_v2,
-					global_render_ctrl_v1, i, global_render_ctrl_v3);
-				break;
-			case ST_SQUARE:
-				random_redraw_square(raw, global_preview_img,
-					njob, LR_CTRL_MAX - global_render_ctrl_v2,
-					global_render_ctrl_v1, i, global_render_ctrl_v3);
-				break;
-			case ST_ANNULUS:
-				random_redraw_annulus(raw, global_preview_img,
-					njob, LR_CTRL_MAX - global_render_ctrl_v2,
-					global_render_ctrl_v1, i, global_render_ctrl_v3);
-			default:
-				break;
+		case ST_RADIATION:
+			random_redraw_radiation(raw, global_preview_img,
+				center, njob, LR_CTRL_MAX - global_render_ctrl_v2,
+				global_render_ctrl_v1, i, global_render_ctrl_v3);
+			break;
+		case ST_HORIZONTAL:
+			random_redraw_horizontal(raw, global_preview_img,
+				njob, LR_CTRL_MAX - global_render_ctrl_v2,
+				global_render_ctrl_v1, i, global_render_ctrl_v3);
+			break;
+		case ST_VERTICAL:
+			random_redraw_vertical(raw, global_preview_img,
+				njob, LR_CTRL_MAX - global_render_ctrl_v2,
+				global_render_ctrl_v1, i, global_render_ctrl_v3);
+			break;
+		case ST_SQUARE:
+			random_redraw_square(raw, global_preview_img,
+				njob, LR_CTRL_MAX - global_render_ctrl_v2,
+				global_render_ctrl_v1, i, global_render_ctrl_v3);
+			break;
+		case ST_ANNULUS:
+			random_redraw_annulus(raw, global_preview_img,
+				njob, LR_CTRL_MAX - global_render_ctrl_v2,
+				global_render_ctrl_v1, i, global_render_ctrl_v3);
+		default:
+			break;
 		}
 		global_flag_preview_update = 1;
 		global_flag_rendering += njob;
