@@ -7,10 +7,10 @@
 int main(int argc, const char *argv[])
 {
 	int i, w, h, result;
-	utim_font_t  *font;
-	utim_image_t *img, *txt, *tmp;
-	utim_color_t  color;
-	utim_point_t  pa, pb;
+	UTIM_FONT  *font;
+	UTIM_IMG *img, *txt, *tmp;
+	UTIM_COLOR color;
+	UTIM_POINT pa, pb;
 
 	img = utim_create(640, 480, 4, 255);
 	if (!img) {

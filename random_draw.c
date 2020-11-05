@@ -8,7 +8,7 @@
 /* CAN ONLY HANDLE AN a WHILE a <= b */
 #define random_int(a, b) (a+rand()%(b-a+1))
 
-int random_point_on_line(utim_point_t u, utim_point_t v, utim_point_t r)
+int random_point_on_line(UTIM_POINT u, UTIM_POINT v, UTIM_POINT r)
 {
 	int l, h;
 	float k, b, dx, dy;
@@ -42,8 +42,7 @@ int _index_calc(int xsize, int ysize, int x, int y)
 	return index;
 }
 
-int get_point_color(utim_image_t *img,
-	utim_point_t p, utim_color_t c)
+int get_point_color(UTIM_IMG *img, UTIM_POINT p, UTIM_COLOR c)
 {
 	int i, index = _index_calc(img->xsize, img->ysize, p[0], p[1]);
 	if (index < 0)
@@ -53,13 +52,13 @@ int get_point_color(utim_image_t *img,
 	return 0;
 }
 
-void get_line_avg_color(utim_image_t *img,
-	utim_point_t a, utim_point_t b, utim_color_t c)
+void get_line_avg_color(UTIM_IMG *img,
+	UTIM_POINT a, UTIM_POINT b, UTIM_COLOR c)
 {
 	int i, point_cnt = 0, rgba[4] = {0};
 	int dx, dy, orientation, xa, xb, ya, yb, t;
-	utim_point_t p;
-	utim_color_t c_tmp;
+	UTIM_POINT p;
+	UTIM_COLOR c_tmp;
 	dx = b[0] - a[0];
 	dx = dx < 0 ? -dx : dx;
 	dy = b[1] - a[1];
@@ -105,11 +104,11 @@ void get_line_avg_color(utim_image_t *img,
 #ifndef CONFIG_STD_C89
 	inline
 #endif
-static void _c_point_color(utim_image_t *img, utim_point_t p,
-	utim_point_t center, int x, int y, int *rgba, int *point_cnt)
+static void _c_point_color(UTIM_IMG *img, UTIM_POINT p,
+	UTIM_POINT center, int x, int y, int *rgba, int *point_cnt)
 {
 	int i;
-	utim_color_t color; 
+	UTIM_COLOR color; 
 	p[0] += x; p[1] += y;
 	if (!get_point_color(img, p, color)) {
 		for (i = 0; i < 4; ++i)
@@ -118,10 +117,10 @@ static void _c_point_color(utim_image_t *img, utim_point_t p,
 	}
 	p[0] = center[0]; p[1] = center[1];
 }
-void get_cycle_avg_color(utim_image_t *img,
-	utim_point_t center, int radius, utim_color_t color)
+void get_cycle_avg_color(UTIM_IMG *img,
+	UTIM_POINT center, int radius, UTIM_COLOR color)
 {
-	utim_point_t p;
+	UTIM_POINT p;
 	int i, x, y, dx, dy, err, point_cnt = 0, rgba[4] = {0};
 	x = radius - 1; y = 0;
 	dx = 1; dy = 1; err = dx - (radius << 1);
@@ -152,11 +151,11 @@ void get_cycle_avg_color(utim_image_t *img,
 		color[i] = rgba[i] / point_cnt;
 }
 
-static void get_rect_avg_color(utim_image_t *img,
-	utim_point_t a, int w, int h, utim_color_t c)
+static void get_rect_avg_color(UTIM_IMG *img,
+	UTIM_POINT a, int w, int h, UTIM_COLOR c)
 {
-	utim_point_t p;
-	utim_color_t c_tmp;
+	UTIM_POINT p;
+	UTIM_COLOR c_tmp;
 	int i, j, point_cnt = 0, rgba[4] = {0};
 	if (!w || !h)
 		return;
@@ -195,14 +194,14 @@ static void get_rect_avg_color(utim_image_t *img,
 	return;
 }
 
-utim_image_t *random_redraw_radiation(utim_image_t *img,
-		utim_image_t *buf, utim_point_t center, int nline,
+UTIM_IMG *random_redraw_radiation(UTIM_IMG *img,
+		UTIM_IMG *buf, UTIM_POINT center, int nline,
 	int length_ctrl, int width, int seed, int fixed)
 {
 	int i, lli;
-	utim_color_t c;
-	utim_point_t a;
-	utim_point_t b;
+	UTIM_COLOR c;
+	UTIM_POINT a;
+	UTIM_POINT b;
 	srand(clock() + (seed << 1));
 	for (i = 0; i < nline; ++i) {
 		b[0] = rand() % buf->xsize;
@@ -219,13 +218,13 @@ utim_image_t *random_redraw_radiation(utim_image_t *img,
 	return buf;
 }
 
-utim_image_t *random_redraw_horizontal(utim_image_t *img, utim_image_t *buf,
+UTIM_IMG *random_redraw_horizontal(UTIM_IMG *img, UTIM_IMG *buf,
 	int nline, int length_ctrl, int width, int seed, int fixed)
 {
 	int i, lli;
-	utim_color_t c;
-	utim_point_t a;
-	utim_point_t b;
+	UTIM_COLOR c;
+	UTIM_POINT a;
+	UTIM_POINT b;
 	srand(clock() + (seed << 1));
 	for (i = 0; i < nline; ++i) {
 		a[0] = rand() % buf->xsize;
@@ -246,13 +245,13 @@ utim_image_t *random_redraw_horizontal(utim_image_t *img, utim_image_t *buf,
 	return buf;
 }
 
-utim_image_t *random_redraw_vertical(utim_image_t *img, utim_image_t *buf,
+UTIM_IMG *random_redraw_vertical(UTIM_IMG *img, UTIM_IMG *buf,
 	int nline, int length_ctrl, int width, int seed, int fixed)
 {
 	int i, lli;
-	utim_color_t c;
-	utim_point_t a;
-	utim_point_t b;
+	UTIM_COLOR c;
+	UTIM_POINT a;
+	UTIM_POINT b;
 	srand(clock() + (seed << 1));
 	for (i = 0; i < nline; ++i) {
 		a[0] = rand() % buf->xsize;
@@ -273,12 +272,12 @@ utim_image_t *random_redraw_vertical(utim_image_t *img, utim_image_t *buf,
 	return buf;
 }
 
-utim_image_t *random_redraw_annulus(utim_image_t *img, utim_image_t *buf,
+UTIM_IMG *random_redraw_annulus(UTIM_IMG *img, UTIM_IMG *buf,
 	int nline, int radius_ctrl, int width, int seed, int fixed)
 {
 	int i, lli, radius;
-	utim_color_t color;
-	utim_point_t center;
+	UTIM_COLOR color;
+	UTIM_POINT center;
 	srand(clock() + (seed << 1));
 	for (i = 0; i < nline; ++i) {
 		center[0] = rand() % buf->xsize;
@@ -299,12 +298,12 @@ utim_image_t *random_redraw_annulus(utim_image_t *img, utim_image_t *buf,
 	return buf;
 }
 
-utim_image_t *random_redraw_square(utim_image_t *img, utim_image_t *buf,
+UTIM_IMG *random_redraw_square(UTIM_IMG *img, UTIM_IMG *buf,
 	int nline, int length_ctrl, int width, int seed, int fixed)
 {
 	int i, lli, edge;
-	utim_point_t p;
-	utim_color_t color;
+	UTIM_POINT p;
+	UTIM_COLOR color;
 	srand(clock() + (seed << 1));
 	for (i = 0; i < nline; ++i) {
 		if (fixed) {

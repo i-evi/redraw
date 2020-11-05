@@ -18,7 +18,7 @@ static float global_preview_width;
 static float global_preview_height;
 static struct nk_rect global_preview_rect =
 		{.x = 10, .y = 10, .w = 780, .h = 780};
-static utim_image_t *global_preview_img;
+static UTIM_IMG *global_preview_img;
 
 /*
  * Control Panel window Control:
@@ -42,7 +42,7 @@ enum { /* Stroke Types */
 };
 static int global_stroke_type;
 
-static utim_image_t *global_render_raw;
+static UTIM_IMG *global_render_raw;
 static int global_flag_render;
 static int global_render_ctrl_v0;
 static int global_render_ctrl_v1 = 5;
@@ -54,9 +54,9 @@ static int global_flag_render_cancel;
 static nk_size global_flag_prog_max;    /* Rerendering Progress Max */
 static nk_size global_flag_rendering;   /* Rerendering Progress Cursor */
 
-static utim_image_t *load_image(const char *filename)
+static UTIM_IMG *load_image(const char *filename)
 {
-	utim_image_t *imgdata = utim_read(filename);
+	UTIM_IMG *imgdata = utim_read(filename);
 	if (!imgdata)
 		return NULL;
 	if (utim_img2rgba(imgdata)) {
@@ -66,7 +66,7 @@ static utim_image_t *load_image(const char *filename)
 	return imgdata;
 }
 
-static GLuint update_image(utim_image_t *imgdata, struct nk_image *img)
+static GLuint update_image(UTIM_IMG *imgdata, struct nk_image *img)
 {
 	GLuint tex;
 	struct nk_image timg;

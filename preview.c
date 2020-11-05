@@ -10,8 +10,8 @@
 static void *__call_render(void *arg)
 {
 	int i, njob, iter_count;
-	utim_point_t center;
-	utim_image_t *raw = global_render_raw;
+	UTIM_POINT center;
+	UTIM_IMG *raw = global_render_raw;
 	if (global_preview_img)
 		utim_free_image(global_preview_img);
 	global_preview_img = utim_create(raw->xsize, raw->ysize, 4, 255);

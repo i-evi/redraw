@@ -26,6 +26,10 @@ void ____utim_datatype_test____()
 	 * At simple bmp operations...
 	 */
 	ASSERT_ON_BUILD(sizeof(utim_int32_t) - 4);
+	/*
+	 * Psf2 font file support
+	 */
+	ASSERT_ON_BUILD(sizeof(struct psf2_header) - 32);
 }
 #ifdef RUN_TIME_ENDIAN_CHECK
 	static int _is_little_endian()
@@ -55,10 +59,9 @@ void ____utim_datatype_test____()
 #endif
 static utim_int32_t _index_calc(int xsize, int ysize, int x, int y)
 {
-	utim_int32_t size, index;
+	utim_int32_t index;
 	if (x >= xsize || y >= ysize || x < 0 || y < 0)
 		return -1;
-	size = xsize * ysize;
 	index = xsize * y + x;
 	return index;
 }
@@ -72,6 +75,7 @@ static const char *file_extension(const char *filename)
 	return filename < p ? p + 1 : NULL;
 }
 
+#ifndef USE3RD_STB_IMAGE
 /* 8, 24, 32 bit NON-COMPRESSED BMP supported */
 static byte *_bmp_read(const char *filename,
 	int *xsize, int *ysize, int *channels)
@@ -102,14 +106,14 @@ static byte *_bmp_read(const char *filename,
 #endif
 	color_dp = *(byte*)(header + 28);
 	switch (color_dp) {
-		case 8:
-		case 24:
-		case 32:
-			*channels = color_dp >> 3;
-			break;
-		default:
-			fclose(fp);
-			return NULL;
+	case 8:
+	case 24:
+	case 32:
+		*channels = color_dp >> 3;
+		break;
+	default:
+		fclose(fp);
+		return NULL;
 	}
 	if (!(((*xsize) * (*channels)) % 4)) {
 		windows_byte_cnt = 0;
@@ -159,15 +163,15 @@ static int _bmp_write(const char *filename,
 	utim_uint32_t tmp, r = (xsize * channels) % 4;
 	utim_uint32_t pxl_begin, *x;
 	switch (channels) {
-		case 1:
-			pxl_begin = 54 + 1024;
-			break;
-		case 3:
-		case 4:
-			pxl_begin = 54;
-			break;
-		default:
-			return -1;
+	case 1:
+		pxl_begin = 54 + 1024;
+		break;
+	case 3:
+	case 4:
+		pxl_begin = 54;
+		break;
+	default:
+		return -1;
 	}
 	if (!r) {
 		windows_byte_cnt = 0;
@@ -211,6 +215,7 @@ static int _bmp_write(const char *filename,
 	fclose(fp);
 	return 0;
 }
+#endif /* not defined USE3RD_STB_IMAGE */
 
 /*
  * Use stb image. stb_image.h, stb_image_write.h are included. 
@@ -226,10 +231,12 @@ static int _bmp_write(const char *filename,
 	int png_default_compress = 8;
 #endif
 
-utim_image_t *utim_read(const char*filename)
+UTIM_IMG *utim_read(const char*filename)
 {
+#ifndef USE3RD_STB_IMAGE
 	const char *t;
-	utim_image_t *img = (utim_image_t*)malloc(sizeof(utim_image_t));
+#endif
+	UTIM_IMG *img = (UTIM_IMG*)malloc(sizeof(UTIM_IMG));
 	if (!img)
 		return NULL;
 #ifdef USE3RD_STB_IMAGE
@@ -241,8 +248,10 @@ utim_image_t *utim_read(const char*filename)
 	}
 #else /* Support 24bit bmp image only */
 	t = file_extension(filename);
-	if (strcmp(t, "bmp"))
+	if (strcmp(t, "bmp")) {
+		free(img);
 		return NULL;
+	}
 	img->pixels = _bmp_read(filename,
 		&img->xsize, &img->ysize, &img->channels);
 	if (!img->pixels) {
@@ -253,18 +262,20 @@ utim_image_t *utim_read(const char*filename)
 	return img;
 }
 
-int utim_write(const char *filename, utim_image_t *img)
+int utim_write(const char *filename, UTIM_IMG *img)
 {
 	return utim_write_ctrl(filename, img, 0, 0);
 }
 
 int utim_write_ctrl(const char *filename,
-	utim_image_t *img, int comp, int quality)
+	UTIM_IMG *img, int comp, int quality)
 {
 	const char *t;
 	char tbuf[8];
 	char *p = tbuf;
+#ifdef USE3RD_STB_IMAGE
 	int state;
+#endif
 	t = file_extension(filename);
 	strcpy(tbuf, t);
 	while ((*p = tolower(*p))) ++p;
@@ -278,62 +289,62 @@ int utim_write_ctrl(const char *filename,
 #endif
 #ifdef USE3RD_STB_IMAGE
 	switch (*(utim_int32_t*)tbuf) {
-		case UTIM_BMP:
-			if (!comp)
-				comp = img->channels;
-			state = stbi_write_bmp(filename, img->xsize,
-				img->ysize, comp, img->pixels);
-			if (state != 1)
-				return state;
-			return 0;
-		case UTIM_PNG:
-			if (!comp)
-				comp = img->channels;
-			quality = quality ? quality : png_default_compress;
-			stbi_write_png_compression_level = quality;
-			state = stbi_write_png(filename, img->xsize,
-				img->ysize, img->channels, img->pixels,
-				img->xsize * img->channels);
-			if (state != 1)
-				return state;
-			return 0;
-		case UTIM_JPG:
-			if (!comp)
-				comp = img->channels;
-			quality = quality ? quality : jpg_default_quality;
-			state = stbi_write_jpg(filename, img->xsize,
-				img->ysize, comp, img->pixels, quality);
-			if (state != 1)
-				return state;
-			return 0;
-		case UTIM_TGA:
-			if (!comp)
-				comp = img->channels;
-			state = stbi_write_tga(filename, img->xsize,
-				img->ysize, comp, img->pixels);
-			if (state != 1)
-				return state;
-			return 0;
-		default:
-			return -1; /* Not supported file format */
+	case UTIM_BMP:
+		if (!comp)
+			comp = img->channels;
+		state = stbi_write_bmp(filename, img->xsize,
+			img->ysize, comp, img->pixels);
+		if (state != 1)
+			return state;
+		return 0;
+	case UTIM_PNG:
+		if (!comp)
+			comp = img->channels;
+		quality = quality ? quality : png_default_compress;
+		stbi_write_png_compression_level = quality;
+		state = stbi_write_png(filename, img->xsize,
+			img->ysize, img->channels, img->pixels,
+			img->xsize * img->channels);
+		if (state != 1)
+			return state;
+		return 0;
+	case UTIM_JPG:
+		if (!comp)
+			comp = img->channels;
+		quality = quality ? quality : jpg_default_quality;
+		state = stbi_write_jpg(filename, img->xsize,
+			img->ysize, comp, img->pixels, quality);
+		if (state != 1)
+			return state;
+		return 0;
+	case UTIM_TGA:
+		if (!comp)
+			comp = img->channels;
+		state = stbi_write_tga(filename, img->xsize,
+			img->ysize, comp, img->pixels);
+		if (state != 1)
+			return state;
+		return 0;
+	default:
+		return -1; /* Not supported file format */
 	}
 #else /* Support 8, 24, 32 bit bmp image only */
 	if (strcmp(tbuf, "bmp"))
 		return -1;  /* Not supported file format */
 	switch (img->channels) {
-		case 1:
-		case 3:
-		case 4:
-			break;
-		default:
-			return -1;
+	case 1:
+	case 3:
+	case 4:
+		break;
+	default:
+		return -1;
 	}
 	return _bmp_write(filename,
 		img->pixels, img->xsize, img->ysize, img->channels);
 #endif
 }
 
-void utim_free_image(utim_image_t *img)
+void utim_free_image(UTIM_IMG *img)
 {
 	if (!img)
 		return;
@@ -342,16 +353,16 @@ void utim_free_image(utim_image_t *img)
 	free(img);
 }
 
-utim_image_t *utim_clone(utim_image_t *img)
+UTIM_IMG *utim_clone(UTIM_IMG *img)
 {
-	utim_image_t *clone;
+	UTIM_IMG *clone;
 	int size = img->xsize * img->ysize * img->channels;
 	if (!size)
 		return NULL;
-	clone = (utim_image_t*)malloc(sizeof(utim_image_t));
+	clone = (UTIM_IMG*)malloc(sizeof(UTIM_IMG));
 	if (!clone)
 		return NULL;
-	memcpy(clone, img, sizeof(utim_image_t));
+	memcpy(clone, img, sizeof(UTIM_IMG));
 	clone->pixels = (byte*)malloc(size);
 	if (!clone->pixels) {
 		free(clone);
@@ -361,7 +372,7 @@ utim_image_t *utim_clone(utim_image_t *img)
 	return clone;
 }
 
-static byte *_image_resize_nearest(utim_image_t *img, int x, int y)
+static byte *_image_resize_nearest(UTIM_IMG *img, int x, int y)
 {
 	byte *p;
 	int i, j, ch_size = x * y;
@@ -381,10 +392,10 @@ static byte *_image_resize_nearest(utim_image_t *img, int x, int y)
 }
 
 #ifdef USE3RD_STB_IMAGE
-static byte *_image_resize_linear(utim_image_t *img, int x, int y)
+static byte *_image_resize_linear(UTIM_IMG *img, int x, int y)
 {
 	byte *p;
-	int i, j, ch_size = x * y;
+	int ch_size = x * y;
 	p = (byte*)malloc(ch_size * img->channels);
 	if (!p)
 		return NULL;
@@ -394,31 +405,31 @@ static byte *_image_resize_linear(utim_image_t *img, int x, int y)
 }
 #endif
 
-utim_image_t *utim_resize(utim_image_t *img, int x, int y, int mode)
+UTIM_IMG *utim_resize(UTIM_IMG *img, int x, int y, int mode)
 {
-	utim_image_t *resize;
-	resize = (utim_image_t*)malloc(sizeof(utim_image_t));
+	UTIM_IMG *resize;
+	resize = (UTIM_IMG*)malloc(sizeof(UTIM_IMG));
 	if (!resize)
 		return NULL;
 	switch (mode) {
-		case UTIM_RESIZE_NEAREST:
-			resize->pixels = _image_resize_nearest(img, x, y);
-			if (!resize->pixels) {
-				free(resize);
-				return NULL;
-			}
-			break;
-#ifdef USE3RD_STB_IMAGE
-		case UTIM_RESIZE_LINEAR:
-			resize->pixels = _image_resize_linear(img, x, y);
-			if (!resize->pixels) {
-				free(resize);
-				return NULL;
-			}
-			break;
-#endif
-		default:
+	case UTIM_RESIZE_NEAREST:
+		resize->pixels = _image_resize_nearest(img, x, y);
+		if (!resize->pixels) {
+			free(resize);
 			return NULL;
+		}
+		break;
+#ifdef USE3RD_STB_IMAGE
+	case UTIM_RESIZE_LINEAR:
+		resize->pixels = _image_resize_linear(img, x, y);
+		if (!resize->pixels) {
+			free(resize);
+			return NULL;
+		}
+		break;
+#endif
+	default:
+		return NULL;
 	}
 	resize->xsize = x;
 	resize->ysize = y;
@@ -426,7 +437,7 @@ utim_image_t *utim_resize(utim_image_t *img, int x, int y, int mode)
 	return resize;
 }
 
-int utim_swap_chl(utim_image_t *img, int a, int b)
+int utim_swap_chl(UTIM_IMG *img, int a, int b)
 {
 	byte c;
 	int i, ch_size;
@@ -442,49 +453,49 @@ int utim_swap_chl(utim_image_t *img, int a, int b)
 	return 0;
 }
 
-int utim_img2rgb(utim_image_t *img)
+int utim_img2rgb(UTIM_IMG *img)
 {
 	switch (img->channels) {
-		case 1:
-			return utim_gray2rgb(img);
-		case 3:
-			return 0;
-		case 4:
-			return utim_rgba2rgb(img);
-		default:
-			return UTIM_ERR_BAD_ARG;
+	case 1:
+		return utim_gray2rgb(img);
+	case 3:
+		return 0;
+	case 4:
+		return utim_rgba2rgb(img);
+	default:
+		return UTIM_ERR_BAD_ARG;
 	}
 }
 
-int utim_img2gray(utim_image_t *img)
+int utim_img2gray(UTIM_IMG *img)
 {
 	switch (img->channels) {
-		case 1:
-			return 0;
-		case 3:
-			return utim_rgb2gray(img);
-		case 4:
-			return utim_rgba2gray(img);
-		default:
-			return UTIM_ERR_BAD_ARG;
+	case 1:
+		return 0;
+	case 3:
+		return utim_rgb2gray(img);
+	case 4:
+		return utim_rgba2gray(img);
+	default:
+		return UTIM_ERR_BAD_ARG;
 	}
 }
 
-int utim_img2rgba(utim_image_t *img)
+int utim_img2rgba(UTIM_IMG *img)
 {
 	switch (img->channels) {
-		case 1:
-			return utim_gray2rgba(img);
-		case 3:
-			return utim_rgb2rgba(img);
-		case 4:
-			return 0;
-		default:
-			return UTIM_ERR_BAD_ARG;
+	case 1:
+		return utim_gray2rgba(img);
+	case 3:
+		return utim_rgb2rgba(img);
+	case 4:
+		return 0;
+	default:
+		return UTIM_ERR_BAD_ARG;
 	}
 }
 
-int utim_rgba2rgb(utim_image_t *rgba)
+int utim_rgba2rgb(UTIM_IMG *rgba)
 {
 	byte *new_pixels, *p;
 	int i, ch_size = rgba->xsize * rgba->ysize;
@@ -505,14 +516,14 @@ int utim_rgba2rgb(utim_image_t *rgba)
 	return 0;
 }
 
-utim_image_t *utim_rgb_from_rgba(utim_image_t *rgba)
+UTIM_IMG *utim_rgb_by_rgba(UTIM_IMG *rgba)
 {
-	utim_image_t *rgb;
+	UTIM_IMG *rgb;
 	byte *p;
 	int i, ch_size = rgba->xsize * rgba->ysize;
 	if (!ch_size || rgba->channels != 4)
 		return NULL;
-	rgb = (utim_image_t*)malloc(sizeof(utim_image_t));
+	rgb = (UTIM_IMG*)malloc(sizeof(UTIM_IMG));
 	if (!rgb)
 		return NULL;
 	rgb->pixels = (byte*)malloc(ch_size * 3);
@@ -532,7 +543,7 @@ utim_image_t *utim_rgb_from_rgba(utim_image_t *rgba)
 	return rgb;
 }
 
-int utim_rgb2bgr(utim_image_t *rgb)
+int utim_rgb2bgr(UTIM_IMG *rgb)
 {
 	int n;
 	byte *p1, *p2;
@@ -551,9 +562,9 @@ int utim_rgb2bgr(utim_image_t *rgb)
 	return 0;
 }
 
-utim_image_t *utim_bgr_from_rgb(utim_image_t *rgb)
+UTIM_IMG *utim_bgr_by_rgb(UTIM_IMG *rgb)
 {
-	utim_image_t *bgr = utim_clone(rgb);
+	UTIM_IMG *bgr = utim_clone(rgb);
 	if (!bgr)
 		return NULL;
 	if (utim_rgb2bgr(bgr)) {
@@ -563,7 +574,7 @@ utim_image_t *utim_bgr_from_rgb(utim_image_t *rgb)
 	return bgr;
 }
 
-int utim_rgb2gray(utim_image_t *rgb)
+int utim_rgb2gray(UTIM_IMG *rgb)
 {
 	byte *new_pixels, *p;
 	int i, sum, ch_size;
@@ -587,7 +598,7 @@ int utim_rgb2gray(utim_image_t *rgb)
 	return 0;
 }
 
-int utim_rgba2gray(utim_image_t *rgba)
+int utim_rgba2gray(UTIM_IMG *rgba)
 {
 	byte *new_pixels, *p;
 	int i, sum, ch_size;
@@ -611,14 +622,14 @@ int utim_rgba2gray(utim_image_t *rgba)
 	return 0;
 }
 
-utim_image_t *utim_gray_from_rgb(utim_image_t *rgb)
+UTIM_IMG *utim_gray_by_rgb(UTIM_IMG *rgb)
 {
 	byte *p;
-	utim_image_t *gray;
+	UTIM_IMG *gray;
 	int i, sum, ch_size;
 	if (rgb->channels != 3)
 		return NULL;
-	gray = (utim_image_t*)malloc(sizeof(utim_image_t));
+	gray = (UTIM_IMG*)malloc(sizeof(UTIM_IMG));
 	if (!gray)
 		return NULL;
 	ch_size = rgb->xsize * rgb->ysize;
@@ -641,7 +652,7 @@ utim_image_t *utim_gray_from_rgb(utim_image_t *rgb)
 	return gray;
 }
 
-int utim_gray2rgb(utim_image_t *gray)
+int utim_gray2rgb(UTIM_IMG *gray)
 {
 	byte *new_pixels;
 	int i, off, ch_size;
@@ -663,7 +674,7 @@ int utim_gray2rgb(utim_image_t *gray)
 	return 0;
 }
 
-int utim_gray2rgba(utim_image_t *gray)
+int utim_gray2rgba(UTIM_IMG *gray)
 {
 	byte *new_pixels;
 	int i, off, ch_size;
@@ -686,7 +697,7 @@ int utim_gray2rgba(utim_image_t *gray)
 	return 0;
 }
 
-int utim_rgb2rgba(utim_image_t *rgb)
+int utim_rgb2rgba(UTIM_IMG *rgb)
 {
 	byte *new_pixels;
 	int i, off_rgba, off_rgb, ch_size;
@@ -710,13 +721,13 @@ int utim_rgb2rgba(utim_image_t *rgb)
 	return 0;
 }
 
-utim_image_t *utim_rgb_from_gray(utim_image_t *gray)
+UTIM_IMG *utim_rgb_by_gray(UTIM_IMG *gray)
 {
-	utim_image_t *rgb;
+	UTIM_IMG *rgb;
 	int i, off, ch_size;
 	if (gray->channels != 1)
 		return NULL;
-	rgb = (utim_image_t*)malloc(sizeof(utim_image_t));
+	rgb = (UTIM_IMG*)malloc(sizeof(UTIM_IMG));
 	if (!rgb)
 		return NULL;
 	ch_size = gray->xsize * gray->ysize;
@@ -737,13 +748,13 @@ utim_image_t *utim_rgb_from_gray(utim_image_t *gray)
 	return rgb;
 }
 
-utim_image_t *utim_create(int x, int y, int nch, int c)
+UTIM_IMG *utim_create(int x, int y, int nch, int c)
 {
-	utim_image_t *img;
+	UTIM_IMG *img;
 	int size = x * y * nch;
 	if (!size || nch > UTIM_MAX_CHANNELS)
 		return NULL;
-	img = (utim_image_t*)malloc(sizeof(utim_image_t));
+	img = (UTIM_IMG*)malloc(sizeof(UTIM_IMG));
 	if (!img)
 		return NULL;
 	img->pixels = (byte*)malloc(size);
@@ -758,10 +769,10 @@ utim_image_t *utim_create(int x, int y, int nch, int c)
 	return img;
 }
 
-utim_image_t *utim_stack(utim_image_t **chx, int nch)
+UTIM_IMG *utim_stack(UTIM_IMG **chx, int nch)
 {
 	byte *p;
-	utim_image_t *img;
+	UTIM_IMG *img;
 	int i, j, ch_size = (*chx)->xsize * (*chx)->ysize;
 	if (nch > UTIM_MAX_CHANNELS || nch <= 0)
 		return NULL;
@@ -770,7 +781,7 @@ utim_image_t *utim_stack(utim_image_t **chx, int nch)
 			chx[0]->ysize != chx[i]->ysize)
 			return NULL;
 	}
-	img = (utim_image_t*)malloc(sizeof(utim_image_t));
+	img = (UTIM_IMG*)malloc(sizeof(UTIM_IMG));
 	if (!img)
 		return NULL;
 	img->pixels = (byte*)malloc(ch_size * nch);
@@ -789,14 +800,14 @@ utim_image_t *utim_stack(utim_image_t **chx, int nch)
 	return img;
 }
 
-utim_image_t *utim_pick_chl(utim_image_t *img, int ich)
+UTIM_IMG *utim_pick_chl(UTIM_IMG *img, int ich)
 {
 	byte *p;
-	utim_image_t *ch;
+	UTIM_IMG *ch;
 	int i, ch_size;
 	if (!(ich < img->channels))
 		return NULL;
-	ch = (utim_image_t*)malloc(sizeof(utim_image_t));
+	ch = (UTIM_IMG*)malloc(sizeof(UTIM_IMG));
 	if (!ch)
 		return NULL;
 	ch_size = img->xsize * img->ysize;
@@ -814,21 +825,21 @@ utim_image_t *utim_pick_chl(utim_image_t *img, int ich)
 	return ch;
 }
 
-int utim_set_opacity(utim_image_t *img, int opacity)
+int utim_set_opacity(UTIM_IMG *img, int opacity)
 {
 	byte *c;
 	int i, sum, ch_size;
 	switch (img->channels) {
-		case 1:
-			if (!utim_gray2rgba(img))
-				return UTIM_ERR_BAD_ARG;
-		case 3:
-			if (!utim_rgb2rgba(img))
-				return UTIM_ERR_BAD_ARG;
-		case 4: /* RGBA */
-			break;
-		default:
+	case 1:
+		if (!utim_gray2rgba(img))
 			return UTIM_ERR_BAD_ARG;
+	case 3:
+		if (!utim_rgb2rgba(img))
+			return UTIM_ERR_BAD_ARG;
+	case 4: /* RGBA */
+		break;
+	default:
+		return UTIM_ERR_BAD_ARG;
 	}
 	ch_size = img->xsize * img->ysize;
 	c = img->pixels;
@@ -844,7 +855,7 @@ int utim_set_opacity(utim_image_t *img, int opacity)
 	return 0;
 }
 
-utim_image_t *utim_set_chl(utim_image_t *img, int ich, int color)
+UTIM_IMG *utim_set_chl(UTIM_IMG *img, int ich, int color)
 {
 	byte *c;
 	int i, ch_size;
@@ -859,7 +870,7 @@ utim_image_t *utim_set_chl(utim_image_t *img, int ich, int color)
 	return img;
 }
 
-int utim_negative_color(utim_image_t *img)
+void utim_negative_color(UTIM_IMG *img)
 {
 	int i, j, ch_size = img->xsize * img->ysize;
 	for (i = 0; i < ch_size; ++i) {
@@ -874,10 +885,10 @@ int utim_negative_color(utim_image_t *img)
 #ifndef CONFIG_STD_C89
 	inline
 #endif
-static void _compose_pixel(utim_image_t *bg,
-	utim_image_t *im, int i, int j, utim_point_t p)
+static void _compose_pixel(UTIM_IMG *bg,
+	UTIM_IMG *im, int i, int j, UTIM_POINT p)
 {
-	utim_color_t c_bg, c_im;
+	UTIM_COLOR c_bg, c_im;
 	int k, index_bg, index_im;
 	byte *rb = &c_bg[UTIM_COLOR_R];
 	byte *gb = &c_bg[UTIM_COLOR_G];
@@ -911,8 +922,8 @@ static void _compose_pixel(utim_image_t *bg,
 	}
 }
 
-int utim_superpose(utim_image_t *bg,
-				utim_image_t *img, utim_point_t p)
+int utim_superpose(UTIM_IMG *bg,
+				UTIM_IMG *img, UTIM_POINT p)
 {
 	int i, j;
 	if (p[UTIM_POINT_X] >= bg->xsize ||
@@ -930,9 +941,9 @@ int utim_superpose(utim_image_t *bg,
  */
 
 static int (*utim_draw_point_fn)
-	(utim_image_t*, utim_point_t, utim_color_t) = utim_draw_point;
+	(UTIM_IMG*, UTIM_POINT, UTIM_COLOR) = utim_draw_point;
 
-int utim_set_pixel(utim_image_t *img, utim_point_t p, utim_color_t c)
+int utim_set_pixel(UTIM_IMG *img, UTIM_POINT p, UTIM_COLOR c)
 {
 	int i, index = _index_calc(img->xsize,
 			img->ysize, p[UTIM_POINT_X], p[UTIM_POINT_Y]);
@@ -943,9 +954,9 @@ int utim_set_pixel(utim_image_t *img, utim_point_t p, utim_color_t c)
 	return 0;
 }
 
-int utim_draw_point(utim_image_t *img, utim_point_t p, utim_color_t c)
+int utim_draw_point(UTIM_IMG *img, UTIM_POINT p, UTIM_COLOR c)
 {
-	utim_color_t c_img;
+	UTIM_COLOR c_img;
 	byte *ri = &c[UTIM_COLOR_R];
 	byte *gi = &c[UTIM_COLOR_G];
 	byte *bi = &c[UTIM_COLOR_B];
@@ -954,7 +965,7 @@ int utim_draw_point(utim_image_t *img, utim_point_t p, utim_color_t c)
 	byte *gb = &c_img[UTIM_COLOR_G];
 	byte *bb = &c_img[UTIM_COLOR_B];
 	byte *ab = &c_img[UTIM_COLOR_A];
-	int i, k, index = _index_calc(img->xsize,
+	int k, index = _index_calc(img->xsize,
 			img->ysize, p[UTIM_POINT_X], p[UTIM_POINT_Y]);
 	if (index < 0)
 		return -1;
@@ -975,17 +986,17 @@ int utim_draw_point(utim_image_t *img, utim_point_t p, utim_color_t c)
 }
 
 void utim_set_draw_point_fn(int (*fn)
-	(utim_image_t*, utim_point_t, utim_color_t))
+	(UTIM_IMG*, UTIM_POINT, UTIM_COLOR))
 {
 	utim_draw_point_fn = fn;
 	return;
 }
 
-static void _image_draw_rect_w1(utim_image_t *img,
-	utim_point_t a, int w, int h, utim_color_t c)
+static void _image_draw_rect_w1(UTIM_IMG *img,
+	UTIM_POINT a, int w, int h, UTIM_COLOR c)
 {
 	int i;
-	utim_point_t p;
+	UTIM_POINT p;
 	if (!w || !h)
 		return;
 	p[UTIM_POINT_X] = a[UTIM_POINT_X];
@@ -1009,11 +1020,11 @@ static void _image_draw_rect_w1(utim_image_t *img,
 	return;
 }
 
-void utim_draw_rect(utim_image_t *img,
-	utim_point_t a, int w, int h, utim_color_t c, int width)
+void utim_draw_rect(UTIM_IMG *img,
+	UTIM_POINT a, int w, int h, UTIM_COLOR c, int width)
 {
 	int i, half;
-	utim_point_t p;
+	UTIM_POINT p;
 	if (!w || !h || !width)
 		return;
 	half = width >> 1;
@@ -1029,11 +1040,11 @@ void utim_draw_rect(utim_image_t *img,
 	return;
 }
 
-void utim_draw_line(utim_image_t *img,
-	utim_point_t a, utim_point_t b, utim_color_t c, int width)
+void utim_draw_line(UTIM_IMG *img,
+	UTIM_POINT a, UTIM_POINT b, UTIM_COLOR c, int width)
 {
 	int dx, dy, orientation, xa, xb, ya, yb, t;
-	utim_point_t p;
+	UTIM_POINT p;
 	if (!width)
 		return;
 	width = width >  0 ? width : -width;
@@ -1082,8 +1093,8 @@ void utim_draw_line(utim_image_t *img,
 #ifndef CONFIG_STD_C89
 	inline
 #endif
-static void _draw_circle_point(utim_image_t *img, utim_point_t p,
-	utim_point_t center, int x, int y, utim_color_t color, int width)
+static void _draw_circle_point(UTIM_IMG *img, UTIM_POINT p,
+	UTIM_POINT center, int x, int y, UTIM_COLOR color, int width)
 {
 	p[UTIM_POINT_X] += x;
 	p[UTIM_POINT_Y] += y;
@@ -1094,10 +1105,10 @@ static void _draw_circle_point(utim_image_t *img, utim_point_t p,
 	p[UTIM_POINT_X] = center[UTIM_POINT_X];
 	p[UTIM_POINT_Y] = center[UTIM_POINT_Y];
 }
-void utim_draw_circle(utim_image_t *img,
-	utim_point_t center, int radius, utim_color_t color, int width)
+void utim_draw_circle(UTIM_IMG *img,
+	UTIM_POINT center, int radius, UTIM_COLOR color, int width)
 {
-	utim_point_t p;
+	UTIM_POINT p;
 	int x, y, dx, dy, err;
 	if (!width)
 		return;
@@ -1128,11 +1139,11 @@ void utim_draw_circle(utim_image_t *img,
 	}
 }
 
-void utim_draw_filled_circle(utim_image_t *img,
-	utim_point_t center, int radius, utim_color_t color)
+void utim_draw_filled_circle(UTIM_IMG *img,
+	UTIM_POINT center, int radius, UTIM_COLOR color)
 {
 	int x, y, r2;
-	utim_point_t p, bounds[2];
+	UTIM_POINT p, bounds[2];
 	if (radius <= 0) return;
 	bounds[0][UTIM_POINT_X] = center[UTIM_POINT_X] - radius;
 	bounds[1][UTIM_POINT_X] = center[UTIM_POINT_X] + radius;
@@ -1186,7 +1197,8 @@ static int _chk_psf2_header(struct psf2_header header)
 
 static unsigned int _read_utf8_value(byte *character, int *nb)
 {
-	unsigned int i, first, scalar;
+	int i;
+	unsigned int first, scalar;
 	*nb = 1;
 	first = character[0];
 	scalar = first;
@@ -1219,16 +1231,16 @@ static void _init_utf8_table(unsigned int *utf8index,
 	}
 }
 
-utim_font_t *utim_load_font(const char *filename)
+UTIM_FONT *utim_load_font(const char *filename)
 {
 	FILE *fp;
 	byte *utf_data;
-	utim_font_t *font;
+	UTIM_FONT *font;
 	int dsize, state, pos, end;
 	fp = fopen(filename, "rb");
 	if (!fp)
 		return NULL;
-	font = (utim_font_t*)malloc(sizeof(utim_font_t));
+	font = (UTIM_FONT*)malloc(sizeof(UTIM_FONT));
 	if (!font) {
 		fclose(fp);
 		return NULL;
@@ -1295,7 +1307,7 @@ utim_font_t *utim_load_font(const char *filename)
 	return font;
 }
 
-void utim_free_font(utim_font_t *font)
+void utim_free_font(UTIM_FONT *font)
 {
 	if (!font)
 		return;
@@ -1306,7 +1318,7 @@ void utim_free_font(utim_font_t *font)
 	free(font);
 }
 
-byte *get_character(utim_font_t *font, int number)
+byte *get_character(UTIM_FONT *font, unsigned int number)
 {
 	if (number >= font->header.length)
 		return NULL;
@@ -1318,9 +1330,9 @@ byte *get_character(utim_font_t *font, int number)
 	return(font->glyphs);
 }
 
-static int _glyph_index(utim_font_t *font, unsigned int v)
+static int _glyph_index(UTIM_FONT *font, unsigned int v)
 {
-	int i;
+	unsigned int i;
 	if (!(font->header.flags & PSF2_HAS_UNICODE_TABLE)) {
 		/* Only 7-bits ASCII is supported */
         	if (v <= 32 || v > 127) {
@@ -1337,7 +1349,7 @@ static int _glyph_index(utim_font_t *font, unsigned int v)
 	return -1;
 }
 
-byte *get_glyph(utim_font_t *font, char *character, int *nb){
+byte *get_glyph(UTIM_FONT *font, char *character, int *nb){
     return get_character(font,
     	_glyph_index(font, _read_utf8_value((byte*)character, nb)));
 }
@@ -1365,11 +1377,11 @@ for (j = 0; j < charlen; ++j) {                                \
 	}                                                      \
 }
 
-utim_image_t *utim_text(utim_font_t *font, char *text, utim_color_t color)
+UTIM_IMG *utim_text(UTIM_FONT *font, char *text, UTIM_COLOR color)
 {
 	byte *charp;
-	utim_image_t *img;
-	utim_point_t point;
+	UTIM_IMG *img;
+	UTIM_POINT point;
 	int i, j, k, t, l, charlen, nb, pos = 0;
 	if (!font || !text)
 		return NULL;

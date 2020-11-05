@@ -5,20 +5,20 @@
 	extern "C" {
 #endif
 
-utim_image_t *random_redraw_radiation(utim_image_t *img,
-		utim_image_t *buf, utim_point_t center, int nline,
+UTIM_IMG *random_redraw_radiation(UTIM_IMG *img,
+		UTIM_IMG *buf, UTIM_POINT center, int nline,
 	int length_ctrl, int width, int seed, int fixed);
 
-utim_image_t *random_redraw_horizontal(utim_image_t *img, utim_image_t *buf,
+UTIM_IMG *random_redraw_horizontal(UTIM_IMG *img, UTIM_IMG *buf,
 	int nline, int length_ctrl, int width, int seed, int fixed);
 
-utim_image_t *random_redraw_vertical(utim_image_t *img, utim_image_t *buf,
+UTIM_IMG *random_redraw_vertical(UTIM_IMG *img, UTIM_IMG *buf,
 	int nline, int length_ctrl, int width, int seed, int fixed);
 
-utim_image_t *random_redraw_square(utim_image_t *img, utim_image_t *buf,
+UTIM_IMG *random_redraw_square(UTIM_IMG *img, UTIM_IMG *buf,
 	int nline, int length_ctrl, int width, int seed, int fixed);
 
-utim_image_t *random_redraw_annulus(utim_image_t *img, utim_image_t *buf,
+UTIM_IMG *random_redraw_annulus(UTIM_IMG *img, UTIM_IMG *buf,
 	int nline, int radius_ctrl, int width, int seed, int fixed);
 
 #ifdef __cplusplus
